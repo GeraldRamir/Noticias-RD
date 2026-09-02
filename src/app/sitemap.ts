@@ -1,29 +1,36 @@
 import type { MetadataRoute } from "next";
-import { prisma } from "@/lib/prisma";
-import { ArticleStatus } from "@prisma/client";
+import { MOCK_ARTICLES, MOCK_CATEGORIES } from "@/lib/mock-data";
+import { AGORA_ARTICLES, EXTRA_CATEGORIES, OPINION_ARTICLES } from "@/lib/portal-data";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const base = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+  const allArticles = [...MOCK_ARTICLES, ...OPINION_ARTICLES, ...AGORA_ARTICLES];
+  const allCategories = [...MOCK_CATEGORIES, ...EXTRA_CATEGORIES];
 
-  const [articles, categories] = await Promise.all([
-    prisma.article.findMany({
-      where: { status: ArticleStatus.PUBLISHED },
-      select: { slug: true, updatedAt: true },
-    }),
-    prisma.category.findMany({ select: { slug: true, updatedAt: true } }),
-  ]);
+  const staticPages = [
+    "",
+    "/categorias",
+    "/contacto",
+    "/galeria",
+    "/buscar",
+    "/opinion",
+    "/agora",
+    "/videos",
+    "/podcast",
+    "/ultima-hora",
+    "/servicios",
+    "/nosotros",
+    "/privacidad",
+    "/terminos",
+  ];
 
   return [
-    { url: base, lastModified: new Date() },
-    { url: `${base}/categorias`, lastModified: new Date() },
-    { url: `${base}/contacto`, lastModified: new Date() },
-    { url: `${base}/galeria`, lastModified: new Date() },
-    { url: `${base}/buscar`, lastModified: new Date() },
-    ...categories.map((c) => ({
+    ...staticPages.map((path) => ({ url: `${base}${path}`, lastModified: new Date() })),
+    ...allCategories.map((c) => ({
       url: `${base}/categoria/${c.slug}`,
       lastModified: c.updatedAt,
     })),
-    ...articles.map((a) => ({
+    ...allArticles.map((a) => ({
       url: `${base}/noticia/${a.slug}`,
       lastModified: a.updatedAt,
     })),

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { prisma } from "@/lib/prisma";
+import { articleExists } from "@/lib/queries";
 
 const schema = z.object({
   articleId: z.string().min(1),
@@ -14,20 +14,9 @@ export async function POST(req: Request) {
     const body = await req.json();
     const data = schema.parse(body);
 
-    const article = await prisma.article.findUnique({ where: { id: data.articleId } });
-    if (!article) {
+    if (!(await articleExists(data.articleId))) {
       return NextResponse.json({ error: "Artículo no encontrado" }, { status: 404 });
     }
-
-    await prisma.comment.create({
-      data: {
-        articleId: data.articleId,
-        authorName: data.authorName,
-        authorEmail: data.authorEmail,
-        content: data.content,
-        approved: false,
-      },
-    });
 
     return NextResponse.json({
       message: "Comentario enviado. Será visible tras moderación.",

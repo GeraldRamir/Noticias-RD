@@ -64,6 +64,16 @@ body {
   text-decoration: underline;
 }
 
+.prose-article blockquote {
+  border-left: 4px solid var(--accent);
+  margin: 1.5rem 0;
+  padding: 0.75rem 1.25rem;
+  background: var(--paper-soft);
+  font-family: var(--font-source-serif), Georgia, serif;
+  font-size: 1.25rem;
+  color: var(--ink);
+}
+
 .prose-article img {
   border-radius: 0.25rem;
   margin: 1.5rem 0;
@@ -107,4 +117,26 @@ body {
 }
 .delay-3 {
   animation-delay: 0.3s;
+}
+
+@keyframes ticker {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+.ticker-track {
+  animation: ticker 40s linear infinite;
+}
+
+.ticker-track:hover {
+  animation-play-state: paused;
+}
+
+.ad-slot-pattern {
+  background-image: radial-gradient(circle at 1px 1px, rgba(0, 0, 0, 0.04) 1px, transparent 0);
+  background-size: 12px 12px;
 }

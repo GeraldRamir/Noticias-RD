@@ -1,28 +1,40 @@
 import Link from "next/link";
-import { getCategories } from "@/lib/queries";
+import { getCategories, getSettings } from "@/lib/queries";
+import { UtilityBar } from "./UtilityBar";
 import { CategoriesMenu } from "./CategoriesMenu";
 import { MobileNav } from "./MobileNav";
 import { SearchBar } from "./SearchBar";
 
 const NAV_SECTIONS = [
-  { label: "Inicio", href: "/" },
+  { label: "Última hora", href: "/ultima-hora" },
+  { label: "Opinión", href: "/opinion" },
+  { label: "Ágora", href: "/agora" },
+  { label: "Videos", href: "/videos" },
+  { label: "Podcast", href: "/podcast" },
   { label: "Galería", href: "/galeria" },
   { label: "Contacto", href: "/contacto" },
-  { label: "Buscar", href: "/buscar" },
 ] as const;
 
 export async function Header() {
-  const categories = await getCategories();
-  const categoryItems = categories.map((c) => ({
-    name: c.name,
-    slug: c.slug,
-    description: c.description,
-  }));
+  const [categories, settings] = await Promise.all([getCategories(), getSettings()]);
+  const categoryItems = categories
+    .filter((c) => !["opinion", "agora"].includes(c.slug))
+    .map((c) => ({
+      name: c.name,
+      slug: c.slug,
+      description: c.description,
+    }));
+
+  const social = [
+    { key: "facebook", label: "FB", href: settings.facebook },
+    { key: "twitter", label: "X", href: settings.twitter },
+    { key: "instagram", label: "IG", href: settings.instagram },
+  ].filter((s) => s.href);
 
   return (
     <header className="sticky top-0 z-50 border-b border-line bg-paper/95 backdrop-blur">
       <div className="border-b border-line bg-ink text-white">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-1.5 text-xs tracking-wide">
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-1.5 text-xs tracking-wide">
           <p className="animate-slide-in opacity-90">
             {new Date().toLocaleDateString("es-DO", {
               weekday: "long",
@@ -31,9 +43,36 @@ export async function Header() {
               day: "numeric",
             })}
           </p>
-          <p className="hidden opacity-80 sm:block">Noticias que importan</p>
+          <div className="hidden items-center gap-4 sm:flex">
+            <Link href="/nosotros" className="opacity-80 hover:opacity-100">
+              Nosotros
+            </Link>
+            <Link href="/servicios" className="opacity-80 hover:opacity-100">
+              Servicios
+            </Link>
+            <span className="opacity-50">|</span>
+            {social.map((s) => (
+              <a
+                key={s.key}
+                href={s.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-bold opacity-80 hover:opacity-100"
+              >
+                {s.label}
+              </a>
+            ))}
+          </div>
+          <Link
+            href="/buscar"
+            className="hidden font-semibold uppercase tracking-wide text-accent hover:underline md:inline"
+          >
+            Versión digital
+          </Link>
         </div>
       </div>
+
+      <UtilityBar />
 
       <div className="mx-auto flex max-w-6xl items-center gap-4 px-4 py-4">
         <Link href="/" className="group shrink-0">
@@ -41,7 +80,7 @@ export async function Header() {
             CRÓNICA
           </span>
           <span className="mt-0.5 block text-[10px] font-semibold uppercase tracking-[0.25em] text-accent">
-            Noticias que importan
+            {settings.tagline || "Noticias que importan"}
           </span>
         </Link>
 
@@ -49,11 +88,14 @@ export async function Header() {
           <SearchBar />
         </div>
 
-        <MobileNav categories={categoryItems} sections={[...NAV_SECTIONS]} />
+        <MobileNav
+          categories={categoryItems}
+          sections={[{ label: "Inicio", href: "/" }, ...NAV_SECTIONS, { label: "Buscar", href: "/buscar" }]}
+        />
       </div>
 
       <nav className="hidden border-t border-line md:block">
-        <ul className="mx-auto flex max-w-6xl items-center gap-1 px-4 py-2">
+        <ul className="mx-auto flex max-w-6xl flex-wrap items-center gap-1 px-4 py-2">
           <li>
             <Link
               href="/"
@@ -63,7 +105,7 @@ export async function Header() {
             </Link>
           </li>
           <CategoriesMenu categories={categoryItems} />
-          {NAV_SECTIONS.filter((s) => s.href !== "/").map((section) => (
+          {NAV_SECTIONS.map((section) => (
             <li key={section.href}>
               <Link
                 href={section.href}
@@ -73,6 +115,14 @@ export async function Header() {
               </Link>
             </li>
           ))}
+          <li>
+            <Link
+              href="/buscar"
+              className="inline-flex px-3 py-2 text-sm font-medium text-ink-soft transition-colors hover:bg-paper-soft hover:text-ink"
+            >
+              Buscar
+            </Link>
+          </li>
         </ul>
       </nav>
     </header>

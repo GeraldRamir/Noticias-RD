@@ -1,10 +1,27 @@
+import Link from "next/link";
 import { HeroSlider } from "@/components/HeroSlider";
 import { ArticleCard } from "@/components/ArticleCard";
 import { BannerAd } from "@/components/BannerAd";
+import { BreakingTicker } from "@/components/BreakingTicker";
+import { CategorySection } from "@/components/CategorySection";
+import { SecondaryStoryGrid } from "@/components/SecondaryStoryGrid";
+import { OpinionSection } from "@/components/OpinionSection";
+import { VideoSection } from "@/components/VideoSection";
+import { PodcastSection } from "@/components/PodcastSection";
+import { AgoraSection } from "@/components/AgoraSection";
 import { NewsletterForm } from "@/components/NewsletterForm";
+import { SidebarWidgets } from "@/components/SidebarWidgets";
 import {
   getActiveBanners,
+  getAgoraArticles,
+  getArticlesByCategory,
+  getBreakingHeadlines,
+  getCategories,
+  getColumnists,
   getFeaturedArticles,
+  getFeaturedVideos,
+  getOpinionArticles,
+  getPodcasts,
   getPublishedArticles,
   getSliderArticles,
 } from "@/lib/queries";
@@ -14,28 +31,71 @@ import {
   getVisitorIdFromCookies,
 } from "@/lib/recommendations";
 
-export const dynamic = "force-dynamic";
-
 export default async function HomePage() {
   const visitorId = await getVisitorIdFromCookies();
-  const [slider, featured, latest, homepageBanners, sidebarBanners, mostRead, recommended] =
-    await Promise.all([
-      getSliderArticles(),
-      getFeaturedArticles(4),
-      getPublishedArticles(10),
-      getActiveBanners("HOMEPAGE"),
-      getActiveBanners("SIDEBAR"),
-      getMostReadArticles(5),
-      getRecommendedArticles(visitorId, 6),
-    ]);
+  const [
+    slider,
+    featured,
+    latest,
+    categories,
+    homepageBanners,
+    sidebarBanners,
+    headerBanners,
+    mostRead,
+    recommended,
+    breaking,
+    opinion,
+    columnists,
+    videos,
+    podcasts,
+    agora,
+  ] = await Promise.all([
+    getSliderArticles(),
+    getFeaturedArticles(8),
+    getPublishedArticles(12),
+    getCategories(),
+    getActiveBanners("HOMEPAGE"),
+    getActiveBanners("SIDEBAR"),
+    getActiveBanners("HEADER"),
+    getMostReadArticles(5),
+    getRecommendedArticles(visitorId, 6),
+    getBreakingHeadlines(),
+    getOpinionArticles(4),
+    getColumnists(),
+    getFeaturedVideos(3),
+    getPodcasts(4),
+    getAgoraArticles(3),
+  ]);
 
   const slides = slider.length ? slider : featured.slice(0, 3);
-  const featuredRest = featured.filter((a) => !slides.some((s) => s.id === a.id)).slice(0, 3);
-  const latestFiltered = latest.filter((a) => !slides.some((s) => s.id === a.id));
-  const recommendedFiltered = recommended.filter((a) => !slides.some((s) => s.id === a.id));
+  const slideIds = new Set(slides.map((s) => s.id));
+  const secondaryStories = featured.filter((a) => !slideIds.has(a.id));
+  const featuredRest = secondaryStories.slice(0, 3);
+  const latestFiltered = latest.filter((a) => !slideIds.has(a.id));
+  const recommendedFiltered = recommended.filter((a) => !slideIds.has(a.id));
+
+  const editorialCategories = categories.filter(
+    (c) => !["opinion", "agora"].includes(c.slug)
+  );
+  const categoryArticles = await Promise.all(
+    editorialCategories.map(async (cat) => ({
+      category: cat,
+      articles: await getArticlesByCategory(cat.slug, 3),
+    }))
+  );
 
   return (
     <>
+      {headerBanners[0] && (
+        <div className="border-b border-line bg-[#f7f7f7]">
+          <div className="mx-auto max-w-6xl px-4 py-3">
+            <BannerAd banner={headerBanners[0]} variant="leaderboard" />
+          </div>
+        </div>
+      )}
+
+      <BreakingTicker headlines={breaking} />
+
       <HeroSlider
         slides={slides.map((a) => ({
           title: a.title,
@@ -46,37 +106,43 @@ export default async function HomePage() {
         }))}
       />
 
+      <div className="border-b border-line bg-paper-soft">
+        <div className="mx-auto max-w-6xl px-4 py-6">
+          <SecondaryStoryGrid articles={secondaryStories.slice(0, 4)} />
+        </div>
+      </div>
+
       <div className="mx-auto max-w-6xl px-4 py-12">
         {homepageBanners[0] && (
           <div className="mb-10">
-            <BannerAd banner={homepageBanners[0]} className="aspect-[21/5] w-full" />
+            <BannerAd banner={homepageBanners[0]} variant="billboard" />
           </div>
         )}
 
         <div className="grid gap-10 lg:grid-cols-[1fr_300px]">
           <div>
-            {recommendedFiltered.length > 0 && (
-              <section className="mb-12">
-                <div className="mb-6 flex items-end justify-between border-b-2 border-ink pb-3">
-                  <div>
-                    <h2 className="font-display text-2xl font-bold md:text-3xl">
-                      Para ti
-                    </h2>
-                    <p className="mt-1 text-sm text-muted">
-                      Basado en las noticias que más visitas
-                    </p>
-                  </div>
-                  <span className="text-xs font-bold uppercase tracking-[0.2em] text-accent">
-                    Personalizado
-                  </span>
+            <section className="mb-12">
+              <div className="mb-6 flex items-end justify-between border-b-2 border-ink pb-3">
+                <div>
+                  <h2 className="font-display text-2xl font-bold md:text-3xl">Para ti</h2>
+                  <p className="mt-1 text-sm text-muted">
+                    Recomendaciones basadas en tu historial de lectura
+                  </p>
                 </div>
-                <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                  {recommendedFiltered.slice(0, 6).map((article) => (
-                    <ArticleCard key={article.id} article={article} />
-                  ))}
-                </div>
-              </section>
-            )}
+                <span className="text-xs font-bold uppercase tracking-[0.2em] text-accent">
+                  Personalizado
+                </span>
+              </div>
+              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                {recommendedFiltered.slice(0, 6).map((article) => (
+                  <ArticleCard key={article.id} article={article} />
+                ))}
+              </div>
+            </section>
+
+            <OpinionSection articles={opinion} columnists={columnists} />
+            <VideoSection videos={videos} />
+            <AgoraSection articles={agora} />
 
             {featuredRest.length > 0 && (
               <section className="mb-12">
@@ -94,9 +160,27 @@ export default async function HomePage() {
               </section>
             )}
 
+            {categoryArticles.map(({ category, articles }) => (
+              <CategorySection
+                key={category.id}
+                name={category.name}
+                slug={category.slug}
+                color={category.color}
+                articles={articles}
+              />
+            ))}
+
+            <PodcastSection podcasts={podcasts} />
+
             <section>
-              <div className="mb-2 border-b-2 border-ink pb-3">
+              <div className="mb-2 flex items-end justify-between border-b-2 border-ink pb-3">
                 <h2 className="font-display text-2xl font-bold md:text-3xl">Últimas noticias</h2>
+                <Link
+                  href="/ultima-hora"
+                  className="text-xs font-bold uppercase tracking-[0.2em] text-accent hover:underline"
+                >
+                  Ver todo
+                </Link>
               </div>
               <div>
                 {latestFiltered.map((article) => (
@@ -109,14 +193,41 @@ export default async function HomePage() {
           <aside className="space-y-8">
             <div className="border border-line bg-paper-soft p-5">
               <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-accent">Boletín</h3>
-              <p className="mt-2 text-sm text-muted">Las noticias clave, cada mañana.</p>
+              <p className="mt-2 text-sm text-muted">
+                Lo más importante del día, cada mañana en tu correo.
+              </p>
               <div className="mt-4 [&_form]:border-line [&_input]:bg-white [&_input]:text-ink">
                 <NewsletterForm />
               </div>
             </div>
 
+            <SidebarWidgets />
+
+            <div className="border border-line p-5">
+              <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-ink">Secciones</h3>
+              <ul className="mt-4 space-y-2">
+                {editorialCategories.map((cat) => (
+                  <li key={cat.id}>
+                    <Link
+                      href={`/categoria/${cat.slug}`}
+                      className="flex items-center justify-between text-sm transition hover:text-accent"
+                    >
+                      <span className="flex items-center gap-2">
+                        <span
+                          className="inline-block h-2 w-2 rounded-full"
+                          style={{ backgroundColor: cat.color }}
+                        />
+                        {cat.name}
+                      </span>
+                      <span className="text-xs text-muted">{cat._count.articles}</span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
             {sidebarBanners[0] && (
-              <BannerAd banner={sidebarBanners[0]} className="aspect-[4/5] w-full" />
+              <BannerAd banner={sidebarBanners[0]} variant="sidebar" />
             )}
 
             <div className="border border-line p-5">
@@ -126,13 +237,15 @@ export default async function HomePage() {
                   <li key={article.id} className="flex gap-3">
                     <span className="font-display text-2xl font-bold text-accent/40">{i + 1}</span>
                     <div>
-                      <a
+                      <Link
                         href={`/noticia/${article.slug}`}
                         className="text-sm font-semibold leading-snug hover:text-accent"
                       >
                         {article.title}
-                      </a>
-                      <p className="mt-1 text-[11px] text-muted">{article.views} visitas</p>
+                      </Link>
+                      <p className="mt-1 text-[11px] text-muted">
+                        {article.views.toLocaleString("es-DO")} lecturas
+                      </p>
                     </div>
                   </li>
                 ))}

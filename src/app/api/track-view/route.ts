@@ -1,9 +1,11 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { z } from "zod";
-import { prisma } from "@/lib/prisma";
+import { articleExists } from "@/lib/queries";
+import { MOCK_ARTICLES } from "@/lib/mock-data";
 
 const VISITOR_COOKIE = "cronica_vid";
+const HISTORY_COOKIE = "cronica_history";
 
 const schema = z.object({
   articleId: z.string().min(1),
@@ -22,39 +24,16 @@ export async function POST(req: Request) {
     const isNew = !visitorId;
     if (!visitorId) visitorId = createVisitorId();
 
-    const article = await prisma.article.findUnique({
-      where: { id: body.articleId },
-      select: { id: true, categoryId: true },
-    });
-    if (!article) {
+    if (!(await articleExists(body.articleId))) {
       return NextResponse.json({ error: "Noticia no encontrada" }, { status: 404 });
     }
 
-    // Deduplicate rapid refreshes for the same visitor+article (5 min)
-    const recent = await prisma.articleView.findFirst({
-      where: {
-        visitorId,
-        articleId: article.id,
-        createdAt: { gte: new Date(Date.now() - 1000 * 60 * 5) },
-      },
-      select: { id: true },
-    });
-
-    if (!recent) {
-      await prisma.$transaction([
-        prisma.articleView.create({
-          data: {
-            articleId: article.id,
-            categoryId: body.categoryId || article.categoryId,
-            visitorId,
-          },
-        }),
-        prisma.article.update({
-          where: { id: article.id },
-          data: { views: { increment: 1 } },
-        }),
-      ]);
-    }
+    const article = MOCK_ARTICLES.find((a) => a.id === body.articleId);
+    const categorySlug = article?.category.slug;
+    const existingHistory = jar.get(HISTORY_COOKIE)?.value?.split(",").filter(Boolean) ?? [];
+    const updatedHistory = categorySlug
+      ? [categorySlug, ...existingHistory.filter((s) => s !== categorySlug)].slice(0, 5)
+      : existingHistory;
 
     const res = NextResponse.json({ ok: true, visitorId });
     if (isNew) {
@@ -63,6 +42,14 @@ export async function POST(req: Request) {
         sameSite: "lax",
         path: "/",
         maxAge: 60 * 60 * 24 * 365,
+      });
+    }
+    if (categorySlug) {
+      res.cookies.set(HISTORY_COOKIE, updatedHistory.join(","), {
+        httpOnly: false,
+        sameSite: "lax",
+        path: "/",
+        maxAge: 60 * 60 * 24 * 30,
       });
     }
     return res;
