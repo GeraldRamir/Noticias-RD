@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Figtree, Source_Serif_4 } from "next/font/google";
+import { DemoNavigationGuard } from "@/components/demo/demo-navigation-guard";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import "./globals.css";
@@ -43,6 +44,7 @@ export default function RootLayout({
         <Header />
         <main className="flex-1">{children}</main>
         <Footer />
+        <DemoNavigationGuard />
       </body>
     </html>
   );

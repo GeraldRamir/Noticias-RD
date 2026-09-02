@@ -9,6 +9,10 @@
   --paper-soft: #f7f7f7;
   --accent: #e10600;
   --accent-dark: #b00500;
+  --ff-ink: #1a1a1a;
+  --ff-muted: #6b6b6b;
+  --ff-soft: #8a8a8a;
+  --ff-orange: #ff6a00;
 }
 
 @theme inline {
@@ -20,6 +24,10 @@
   --color-paper-soft: var(--paper-soft);
   --color-accent: var(--accent);
   --color-accent-dark: var(--accent-dark);
+  --color-ff-ink: var(--ff-ink);
+  --color-ff-muted: var(--ff-muted);
+  --color-ff-soft: var(--ff-soft);
+  --color-ff-orange: var(--ff-orange);
   --font-sans: var(--font-figtree);
   --font-display: var(--font-source-serif);
 }
